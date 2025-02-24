@@ -27,15 +27,15 @@
             </snapshots>
         </repository>
 
-        <!-- PlaceholderAPI Repository -->
+        <!-- New PlaceholderAPI Repository -->
         <repository>
-            <id>placeholderapi-repo</id>
-            <url>https://repo.helpch.at/#/releases/me/clip/placeholderapi/</url>
+            <id>helpchat-repo</id>
+            <url>https://repo.helpch.at/#/releases</url>
         </repository>
     </repositories>
 
     <dependencies>
-        <!-- PlaceholderAPI dependency (provided so it's not bundled) -->
+        <!-- PlaceholderAPI dependency -->
         <dependency>
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
@@ -43,7 +43,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Bukkit/Spigot API (provided scope) -->
+        <!-- Bukkit/Spigot API -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
