@@ -5,6 +5,9 @@ on:
     branches:
       - main  # Change to your default branch if needed
 
+permissions:
+  contents: write  # Grants permission to push tags & create releases
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -34,6 +37,8 @@ jobs:
           echo "New version: v$new_version"
 
       - name: Create and push new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ensure token is set
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
@@ -49,4 +54,5 @@ jobs:
           tag_name: ${{ env.NEW_VERSION }}
           name: Release ${{ env.NEW_VERSION }}
           body: "New release: ${{ env.NEW_VERSION }}"
-         
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
