@@ -29,8 +29,8 @@
 
         <!-- New PlaceholderAPI Repository -->
         <repository>
-            <id>helpchat-repo</id>
-            <url>https://repo.helpch.at/#/releases</url>
+            <id>placeholderapi-repo</id>
+            <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
         </repository>
     </repositories>
 
