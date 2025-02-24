@@ -30,7 +30,7 @@
         <!-- PlaceholderAPI Repository -->
         <repository>
             <id>placeholderapi-repo</id>
-            <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+            <url>https://repo.helpch.at/#/releases/me/clip/placeholderapi/</url>
         </repository>
     </repositories>
 
