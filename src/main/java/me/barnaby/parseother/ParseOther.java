@@ -28,7 +28,7 @@ public class ParseOther extends PlaceholderExpansion {
         boolean unsafe = s.startsWith("unsafe_");
         if (unsafe) s = s.substring(7);
 
-        String[] parts = s.split("(?<!\\\\)\}_", 2);
+        String[] parts = s.split("(?<!\\\\)\\}_", 2);
         if (parts.length < 2) return "0"; // Ensure valid format
 
         String userPlaceholder = parts[0].substring(1).replace("\\}_", "}_");
