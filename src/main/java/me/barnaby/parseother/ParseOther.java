@@ -28,13 +28,19 @@ public class ParseOther extends PlaceholderExpansion {
         boolean unsafe = s.startsWith("unsafe_");
         if (unsafe) s = s.substring(7);
 
-        String[] parts = s.split("(?<!\\\\)\\}_", 2);
+        String[] parts = s.split("(?<!\\\\)\}_", 2);
         if (parts.length < 2) return "0"; // Ensure valid format
 
         String userPlaceholder = parts[0].substring(1).replace("\\}_", "}_");
         String placeholderKey = parts[1].substring(1, parts[1].length() - 1);
 
         String resolvedUser = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + userPlaceholder + "%") : userPlaceholder;
+
+        // Prevent parsing if resolvedUser is null, empty, or "none"
+        if (resolvedUser == null || resolvedUser.isBlank() || resolvedUser.equalsIgnoreCase("none")) {
+            return "0";
+        }
+
         if (resolvedUser.contains("%")) return "0"; // Failed placeholder resolution
 
         OfflinePlayer player = getOfflinePlayer(resolvedUser);
