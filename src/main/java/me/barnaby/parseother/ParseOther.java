@@ -28,33 +28,35 @@ public class ParseOther extends PlaceholderExpansion {
     @SuppressWarnings("deprecation")
     @Override
     public String onRequest(OfflinePlayer p, String s) {
-
         boolean unsafe = false;
         if (s.startsWith("unsafe_")) {
             s = s.substring(7);
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\)}_(?=\{)", 2);
-        strings[0] = strings[0].substring(1).replace("\\}_", "}_");
+        String[] strings = s.split("(?<!\\\\)\\}_,", 2);
+        strings[0] = strings[0].substring(1);
+        strings[0] = strings[0].replaceAll("\\\\}_,", "}_,");
         strings[1] = strings[1].substring(1, strings[1].length() - 1);
-
         OfflinePlayer player = null;
+
         String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
-
         if (user.contains("%")) {
-            return "0"; // If the placeholder didn't resolve, return "0"
+            return "0"; // Stop processing if the placeholder fails to resolve
         }
-
+        
         try {
             UUID id = UUID.fromString(user);
             player = safeGetOfflinePlayer(id);
+            if (player == null) {
+                player = safeGetOfflinePlayer(user);
+            }
         } catch (IllegalArgumentException e) {
             player = safeGetOfflinePlayer(user);
         }
 
         if (player == null) {
-            return "0"; // Stop processing if the player is null
+            return "0";
         }
 
         String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
@@ -69,13 +71,17 @@ public class ParseOther extends PlaceholderExpansion {
         if (identifier == null || identifier.trim().isEmpty()) {
             return null;
         }
+        OfflinePlayer player;
         try {
             UUID uuid = UUID.fromString(identifier);
-            return Bukkit.getOfflinePlayer(uuid);
+            player = Bukkit.getOfflinePlayer(uuid);
         } catch (IllegalArgumentException e) {
-            OfflinePlayer player = Bukkit.getOfflinePlayer(identifier);
-            return (player.getName() != null && !player.getName().trim().isEmpty()) ? player : null;
+            player = Bukkit.getOfflinePlayer(identifier);
         }
+        if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
+            return null;
+        }
+        return player;
     }
 
     private OfflinePlayer safeGetOfflinePlayer(UUID uuid) {
@@ -83,6 +89,9 @@ public class ParseOther extends PlaceholderExpansion {
             return null;
         }
         OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-        return (player.getName() != null && !player.getName().trim().isEmpty()) ? player : null;
+        if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
+            return null;
+        }
+        return player;
     }
 }
