@@ -32,7 +32,7 @@ jobs:
         run: |
           current_version="${{ env.TAG }}"
           echo "Current version: $current_version"
-          new_version=$(echo $current_version | awk -F. -v OFS=. '{$NF++; print}')
+          new_version=$(echo $current_version | sed 's/^v//' | awk -F. -v OFS=. '{$NF++; print}')
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
           echo "New version: $new_version"
 
