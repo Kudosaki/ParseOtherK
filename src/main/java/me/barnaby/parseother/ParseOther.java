@@ -1,10 +1,8 @@
 package me.barnaby.parseother;
 
 import java.util.UUID;
-
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 
@@ -25,73 +23,45 @@ public class ParseOther extends PlaceholderExpansion {
         return "2.0.0";
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public String onRequest(OfflinePlayer p, String s) {
-        boolean unsafe = false;
-        if (s.startsWith("unsafe_")) {
-            s = s.substring(7);
-            unsafe = true;
-        }
+        boolean unsafe = s.startsWith("unsafe_");
+        if (unsafe) s = s.substring(7);
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
-        strings[0] = strings[0].substring(1);
-        strings[0] = strings[0].replaceAll("\\\\}_", "}_");
-        strings[1] = strings[1].substring(1, strings[1].length() - 1);
-        OfflinePlayer player = null;
+        String[] parts = s.split("(?<!\\\\)\\}_", 2);
+        if (parts.length < 2) return "0"; // Ensure valid format
 
-        String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
-        if (user.contains("%")) {
-            return "0"; // Stop processing if the placeholder fails to resolve
-        }
-        
-        try {
-            UUID id = UUID.fromString(user);
-            player = safeGetOfflinePlayer(id);
-            if (player == null) {
-                player = safeGetOfflinePlayer(user);
-            }
-        } catch (IllegalArgumentException e) {
-            player = safeGetOfflinePlayer(user);
-        }
+        String userPlaceholder = parts[0].substring(1).replace("\\}_", "}_");
+        String placeholderKey = parts[1].substring(1, parts[1].length() - 1);
 
-        if (player == null) {
-            return "0";
-        }
+        String resolvedUser = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + userPlaceholder + "%") : userPlaceholder;
+        if (resolvedUser.contains("%")) return "0"; // Failed placeholder resolution
 
-        String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
-        if (placeholder.startsWith("%") && placeholder.endsWith("%")) {
-            placeholder = strings[1];
-        }
+        OfflinePlayer player = getOfflinePlayer(resolvedUser);
+        if (player == null) return "0";
 
-        return PlaceholderAPI.setPlaceholders(player, placeholder);
+        String result = PlaceholderAPI.setPlaceholders(player, "%" + placeholderKey + "%");
+        return (result.startsWith("%") && result.endsWith("%")) ? placeholderKey : result;
     }
 
-    private OfflinePlayer safeGetOfflinePlayer(String identifier) {
-        if (identifier == null || identifier.trim().isEmpty()) {
-            return null;
-        }
-        OfflinePlayer player;
+    private OfflinePlayer getOfflinePlayer(String identifier) {
+        if (identifier == null || identifier.isBlank()) return null;
+
         try {
             UUID uuid = UUID.fromString(identifier);
-            player = Bukkit.getOfflinePlayer(uuid);
+            return getOfflinePlayer(uuid);
         } catch (IllegalArgumentException e) {
-            player = Bukkit.getOfflinePlayer(identifier);
+            return getOfflinePlayerByName(identifier);
         }
-        if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
-            return null;
-        }
-        return player;
     }
 
-    private OfflinePlayer safeGetOfflinePlayer(UUID uuid) {
-        if (uuid == null) {
-            return null;
-        }
+    private OfflinePlayer getOfflinePlayer(UUID uuid) {
         OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-        if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
-            return null;
-        }
-        return player;
+        return (player != null && player.getName() != null && !player.getName().isBlank()) ? player : null;
+    }
+
+    private OfflinePlayer getOfflinePlayerByName(String name) {
+        OfflinePlayer player = Bukkit.getOfflinePlayer(name);
+        return (player != null && player.getName() != null && !player.getName().isBlank()) ? player : null;
     }
 }
