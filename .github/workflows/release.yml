@@ -25,14 +25,14 @@ jobs:
 
       - name: Get latest tag
         id: get_tag
-        run: echo "TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo '0.0.0')" >> $GITHUB_ENV
+        run: echo "TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo '0.0.0')" >> $GITHUB_ENV
 
       - name: Calculate next version
         id: version
         run: |
           current_version="${{ env.TAG }}"
           echo "Current version: $current_version"
-          new_version=$(echo $current_version | sed 's/^v//' | awk -F. -v OFS=. '{$NF++; print}')
+          new_version=$(echo $current_version | awk -F. -v OFS=. '{$NF++; print}')
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
           echo "New version: $new_version"
 
