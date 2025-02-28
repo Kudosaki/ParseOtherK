@@ -35,42 +35,26 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
-        strings[0] = strings[0].substring(1);
-        strings[0] = strings[0].replaceAll("\\\\}_", "}_");
+        String[] strings = s.split("(?<!\\\\)\\}_(?=\{)", 2);
+        strings[0] = strings[0].substring(1).replaceAll("\\\\}\\_", "}_");
         strings[1] = strings[1].substring(1, strings[1].length() - 1);
-        OfflinePlayer player = null;
 
-        if (unsafe) {
-            String user = PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%");
-            if (user.contains("%")) {
-                // The placeholder didn't resolve; try with the raw string
-                player = safeGetOfflinePlayer(strings[0]);
-            } else {
-                try {
-                    UUID id = UUID.fromString(user);
-                    player = safeGetOfflinePlayer(id);
-                    if (player == null)
-                        player = safeGetOfflinePlayer(user);
-                } catch (IllegalArgumentException e) {
-                    player = safeGetOfflinePlayer(user);
-                }
-            }
-        } else {
-            String user = strings[0];
-            try {
-                UUID id = UUID.fromString(user);
-                player = safeGetOfflinePlayer(id);
-                if (player == null)
-                    player = safeGetOfflinePlayer(user);
-            } catch (IllegalArgumentException e) {
-                player = safeGetOfflinePlayer(user);
-            }
+        OfflinePlayer player = null;
+        String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
+
+        if (user.contains("%")) {
+            return "0"; // If the placeholder didn't resolve, return "0"
         }
 
-        // Return "PlayerNotFound" if the target player doesn't exist
+        try {
+            UUID id = UUID.fromString(user);
+            player = safeGetOfflinePlayer(id);
+        } catch (IllegalArgumentException e) {
+            player = safeGetOfflinePlayer(user);
+        }
+
         if (player == null) {
-            return "0";
+            return "0"; // Stop processing if the player is null
         }
 
         String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
@@ -81,40 +65,24 @@ public class ParseOther extends PlaceholderExpansion {
         return PlaceholderAPI.setPlaceholders(player, placeholder);
     }
 
-    /**
-     * Safely retrieves an OfflinePlayer using a String identifier.
-     * If the identifier is empty or if the returned player's name is null or empty,
-     * this method returns null.
-     */
     private OfflinePlayer safeGetOfflinePlayer(String identifier) {
         if (identifier == null || identifier.trim().isEmpty()) {
             return null;
         }
-        OfflinePlayer player;
         try {
             UUID uuid = UUID.fromString(identifier);
-            player = Bukkit.getOfflinePlayer(uuid);
+            return Bukkit.getOfflinePlayer(uuid);
         } catch (IllegalArgumentException e) {
-            player = Bukkit.getOfflinePlayer(identifier);
+            OfflinePlayer player = Bukkit.getOfflinePlayer(identifier);
+            return (player.getName() != null && !player.getName().trim().isEmpty()) ? player : null;
         }
-        if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
-            return null;
-        }
-        return player;
     }
 
-    /**
-     * Safely retrieves an OfflinePlayer using a UUID.
-     * If the returned player's name is null or empty, this method returns null.
-     */
     private OfflinePlayer safeGetOfflinePlayer(UUID uuid) {
         if (uuid == null) {
             return null;
         }
         OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-        if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
-            return null;
-        }
-        return player;
+        return (player.getName() != null && !player.getName().trim().isEmpty()) ? player : null;
     }
 }
