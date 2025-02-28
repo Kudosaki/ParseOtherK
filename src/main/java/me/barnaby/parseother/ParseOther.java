@@ -35,7 +35,7 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)}_(?=\{)", 2);
+        String[] strings = s.split("(?<!\\)}_(?=\{)", 2);
         strings[0] = strings[0].substring(1).replace("\\}_", "}_");
         strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
