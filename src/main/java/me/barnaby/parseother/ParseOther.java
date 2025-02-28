@@ -42,7 +42,7 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         OfflinePlayer player = getOfflinePlayer(resolvedUser);
-        if (player == null) return "0";
+        if (player == null || !player.isOnline()) return "0";
 
         String result = PlaceholderAPI.setPlaceholders(player, "%" + placeholderKey + "%");
         return (result.startsWith("%") && result.endsWith("%")) ? placeholderKey : result;
