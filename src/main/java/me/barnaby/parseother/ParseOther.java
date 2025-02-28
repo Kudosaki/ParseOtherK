@@ -37,11 +37,9 @@ public class ParseOther extends PlaceholderExpansion {
         String resolvedUser = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + userPlaceholder + "%") : userPlaceholder;
 
         // Prevent parsing if resolvedUser is null, empty, or "none"
-        if (resolvedUser == null || resolvedUser.isBlank() || resolvedUser.equalsIgnoreCase("none")) {
+        if (resolvedUser == null || resolvedUser.isBlank() || resolvedUser.equalsIgnoreCase("none") || resolvedUser.contains("%")) {
             return "0";
         }
-
-        if (resolvedUser.contains("%")) return "0"; // Failed placeholder resolution
 
         OfflinePlayer player = getOfflinePlayer(resolvedUser);
         if (player == null) return "0";
