@@ -3,6 +3,7 @@ package me.barnaby.parseother;
 import java.util.UUID;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -10,13 +11,13 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import net.md_5.bungee.api.ChatColor;
 
 public class ParseOther extends PlaceholderExpansion {
-  
+
     private final Map<String, String> nameCache = new ConcurrentHashMap<>();
     private final Map<UUID, String> uuidCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cacheCleaner = Executors.newScheduledThreadPool(1);
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
 
     public ParseOther() {
-        // Clears the cache every 1 hour to prevent stale data
         cacheCleaner.scheduleAtFixedRate(() -> {
             nameCache.clear();
             uuidCache.clear();
@@ -53,35 +54,32 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         strings[0] = strings[0].substring(1).replaceAll("\\\\}_", "}_");
+        if (strings[1].isEmpty() || strings[1].length() < 2) {
+            return "0";
+        }
         strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
         OfflinePlayer player = null;
         String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
 
-        // Validate input username (no color codes, only alphanumeric and underscores)
-        if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !user.matches("^[a-zA-Z0-9_]{3,16}$")) {
+        if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !USERNAME_PATTERN.matcher(user).matches()) {
             return "0";
         }
 
-        // Check if user is already cached
+        // Check cache first
         if (nameCache.containsKey(user.toLowerCase())) {
             player = Bukkit.getOfflinePlayer(nameCache.get(user.toLowerCase()));
         } else {
-            // Try resolving UUID first
             try {
                 UUID id = UUID.fromString(user);
-                if (uuidCache.containsKey(id)) {
-                    player = Bukkit.getOfflinePlayer(uuidCache.get(id));
-                } else {
-                    player = Bukkit.getOfflinePlayer(id);
-                    if (player.getName() != null) {
-                        uuidCache.put(id, player.getName());
-                    }
-                }
-            } catch (IllegalArgumentException uuidException) { // Now only catches invalid UUIDs
+                player = Bukkit.getOfflinePlayer(uuidCache.computeIfAbsent(id, key -> {
+                    OfflinePlayer resolved = Bukkit.getOfflinePlayer(key);
+                    return resolved.getName() != null ? resolved.getName() : null;
+                }));
+            } catch (IllegalArgumentException uuidException) { 
                 player = Bukkit.getOfflinePlayer(user);
                 if (player.getName() != null) {
-                    nameCache.put(user.toLowerCase(), player.getName()); // Cache real username
+                    nameCache.put(user.toLowerCase(), player.getName());
                 }
             }
         }
@@ -90,13 +88,19 @@ public class ParseOther extends PlaceholderExpansion {
             return "0";
         }
 
-        // Optimized: Only call PlaceholderAPI once
         String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
-        return ChatColor.translateAlternateColorCodes('&', placeholder.startsWith("%") && placeholder.endsWith("%") ? strings[1] : placeholder);
+        return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
     }
 
-    // Properly shuts down the cache cleaner when the plugin is disabled
-    public void onDisable() {
-        cacheCleaner.shutdownNow(); // Immediately stops cache cleaner tasks
+    @Override
+    public void onUnregister() {
+        cacheCleaner.shutdown();
+        try {
+            if (!cacheCleaner.awaitTermination(5, TimeUnit.SECONDS)) {
+                cacheCleaner.shutdownNow();
+            }
+        } catch (InterruptedException ignored) {
+            cacheCleaner.shutdownNow();
+        }
     }
 }
