@@ -12,6 +12,7 @@ import net.md_5.bungee.api.ChatColor;
 public class ParseOther extends PlaceholderExpansion {
   
   private final Map<String, String> nameCache = new ConcurrentHashMap<>();
+  private final Map<UUID, String> uuidCache = new ConcurrentHashMap<>();
 
   @Override
   public String getAuthor() {
@@ -49,18 +50,26 @@ public class ParseOther extends PlaceholderExpansion {
     OfflinePlayer player = null;
     String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
 
-    if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%")) {
+    // Validate input username
+    if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !user.matches("^[a-zA-Z0-9_]{3,16}$")) {
       return "0";
     }
 
-    // Check cache first
+    // Check if user is already cached
     if (nameCache.containsKey(user.toLowerCase())) {
       player = Bukkit.getOfflinePlayer(nameCache.get(user.toLowerCase()));
     } else {
       // Try resolving UUID first
       try {
         UUID id = UUID.fromString(user);
-        player = Bukkit.getOfflinePlayer(id);
+        if (uuidCache.containsKey(id)) {
+          player = Bukkit.getOfflinePlayer(uuidCache.get(id));
+        } else {
+          player = Bukkit.getOfflinePlayer(id);
+          if (player.getName() != null) {
+            uuidCache.put(id, player.getName());
+          }
+        }
       } catch (IllegalArgumentException e) {
         player = Bukkit.getOfflinePlayer(user);
         if (player.getName() != null) {
