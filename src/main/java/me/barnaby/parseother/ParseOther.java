@@ -59,6 +59,9 @@ public class ParseOther extends PlaceholderExpansion {
       return "0";
     }
 
+    // **New: Strip formatting codes from the detected name**
+    user = user.replaceAll("(?i)[&§][0-9A-FK-OR]", ""); // Removes Minecraft color/format codes
+
     try {
       UUID id = UUID.fromString(user);
       player = Bukkit.getOfflinePlayer(id);
@@ -69,7 +72,7 @@ public class ParseOther extends PlaceholderExpansion {
       player = Bukkit.getOfflinePlayer(user);
     }
 
-    // **NEW DEBUG LOG: Outputs the detected first placeholder (Player Name/UUID)**
+    // **Debug log for detected first placeholder (Player Name/UUID)**
     Bukkit.getLogger().log(Level.INFO, "[ParseOther] Detected player for parsing: " + player.getName() + " (UUID: " + player.getUniqueId() + ")");
 
     if (strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
