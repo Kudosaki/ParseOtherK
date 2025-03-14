@@ -46,39 +46,31 @@ public class ParseOther extends PlaceholderExpansion {
     strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
     OfflinePlayer player;
+    String user;
+
     if (unsafe) {
-      String user = PlaceholderAPI.setPlaceholders(p, ("%" + strings[0] + "%"));
-      
-      if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%")) {
-        Bukkit.getLogger().log(Level.WARNING, "[ParseOther] Invalid user placeholder: " + strings[0]);
-        return "0";
-      }
-      
-      try {
-        UUID id = UUID.fromString(user);
-        player = Bukkit.getOfflinePlayer(id);
-        if (player.getName() == null)
-          player = Bukkit.getOfflinePlayer(user);
-      } catch (IllegalArgumentException e) {
-        player = Bukkit.getOfflinePlayer(user);
-      }
+      user = PlaceholderAPI.setPlaceholders(p, ("%" + strings[0] + "%"));
     } else {
-      String user = strings[0];
-      
-      if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%")) {
-        Bukkit.getLogger().log(Level.WARNING, "[ParseOther] Invalid user input: " + user);
-        return "0";
-      }
-      
-      try {
-        UUID id = UUID.fromString(user);
-        player = Bukkit.getOfflinePlayer(id);
-        if (player.getName() == null)
-          player = Bukkit.getOfflinePlayer(user);
-      } catch (IllegalArgumentException e) {
+      user = strings[0];
+    }
+
+    if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%")) {
+      Bukkit.getLogger().log(Level.WARNING, "[ParseOther] Invalid user placeholder: " + strings[0]);
+      return "0";
+    }
+
+    try {
+      UUID id = UUID.fromString(user);
+      player = Bukkit.getOfflinePlayer(id);
+      if (player.getName() == null) {
         player = Bukkit.getOfflinePlayer(user);
       }
+    } catch (IllegalArgumentException e) {
+      player = Bukkit.getOfflinePlayer(user);
     }
+
+    // **NEW DEBUG LOG: Outputs the detected first placeholder (Player Name/UUID)**
+    Bukkit.getLogger().log(Level.INFO, "[ParseOther] Detected player for parsing: " + player.getName() + " (UUID: " + player.getUniqueId() + ")");
 
     if (strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
       Bukkit.getLogger().log(Level.WARNING, "[ParseOther] Invalid placeholder target: " + strings[1]);
