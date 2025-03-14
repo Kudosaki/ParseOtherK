@@ -103,7 +103,6 @@ public class ParseOther extends PlaceholderExpansion {
         }
     }
 
-    @Override
     public void onUnregister() {
         cacheCleaner.shutdown();
         try {
