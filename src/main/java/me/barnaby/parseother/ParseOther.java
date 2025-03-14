@@ -69,27 +69,30 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         // Check cache first
-        player = nameCache.computeIfAbsent(user.toLowerCase(), key -> {
+        String playerName = nameCache.computeIfAbsent(user.toLowerCase(), key -> {
             OfflinePlayer cachedPlayer = Bukkit.getOfflinePlayer(key);
             return cachedPlayer.getName() != null ? cachedPlayer.getName() : null;
         });
 
-        if (player == null) {
-            if (user.length() == 36) {
-                try {
-                    UUID id = UUID.fromString(user);
-                    player = Bukkit.getOfflinePlayer(uuidCache.computeIfAbsent(id, key -> {
-                        OfflinePlayer resolved = Bukkit.getOfflinePlayer(key);
-                        return resolved.getName() != null ? resolved.getName() : null;
-                    }));
-                } catch (IllegalArgumentException ignored) {}
-            }
-
-            if (player == null) {
-                player = Bukkit.getOfflinePlayer(user);
-                if (player.getName() != null) {
-                    nameCache.put(user.toLowerCase(), player.getName());
+        if (playerName != null) {
+            player = Bukkit.getOfflinePlayer(playerName);
+        } else if (user.length() == 36) {
+            try {
+                UUID id = UUID.fromString(user);
+                playerName = uuidCache.computeIfAbsent(id, key -> {
+                    OfflinePlayer resolved = Bukkit.getOfflinePlayer(key);
+                    return resolved.getName() != null ? resolved.getName() : null;
+                });
+                if (playerName != null) {
+                    player = Bukkit.getOfflinePlayer(playerName);
                 }
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        if (player == null) {
+            player = Bukkit.getOfflinePlayer(user);
+            if (player.getName() != null) {
+                nameCache.put(user.toLowerCase(), player.getName());
             }
         }
 
