@@ -92,7 +92,6 @@ public class ParseOther extends PlaceholderExpansion {
         return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
     }
 
-    @Override
     public void onUnregister() {
         cacheCleaner.shutdown();
         try {
