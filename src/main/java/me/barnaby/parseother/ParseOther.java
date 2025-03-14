@@ -18,11 +18,11 @@ public class ParseOther extends PlaceholderExpansion {
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
 
     public ParseOther() {
-        if (!cacheCleaner.isShutdown() && !cacheCleaner.isTerminated()) {
+        if (!cacheCleaner.isShutdown() && !cacheCleaner isTerminated()) {
             cacheCleaner.scheduleAtFixedRate(() -> {
                 nameCache.clear();
                 uuidCache.clear();
-            }, 1, 1, TimeUnit.HOURS);
+            }, 30, 30, TimeUnit.MINUTES);
         }
     }
 
@@ -61,14 +61,31 @@ public class ParseOther extends PlaceholderExpansion {
         }
         strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
-        OfflinePlayer player = null;
         String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
 
         if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !USERNAME_PATTERN.matcher(user).matches()) {
             return "0";
         }
 
-        // Check cache first
+        OfflinePlayer player = resolvePlayer(user);
+
+        if (player == null || player.getName() == null || strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
+            return "0";
+        }
+
+        try {
+            String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
+            return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
+        } catch (Exception e) {
+            Bukkit.getLogger().severe("[ParseOther] Error processing placeholder: " + e.getMessage());
+            return "0";
+        }
+    }
+
+    private OfflinePlayer resolvePlayer(String user) {
+        OfflinePlayer player = null;
+
+        // Check name cache
         String playerName = nameCache.computeIfAbsent(user.toLowerCase(), key -> {
             OfflinePlayer cachedPlayer = Bukkit.getOfflinePlayer(key);
             return cachedPlayer.getName() != null ? cachedPlayer.getName() : null;
@@ -96,17 +113,7 @@ public class ParseOther extends PlaceholderExpansion {
             }
         }
 
-        if (player == null || player.getName() == null || strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
-            return "0";
-        }
-
-        try {
-            String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
-            return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
-        } catch (Exception e) {
-            Bukkit.getLogger().severe("[ParseOther] Error processing placeholder: " + e.getMessage());
-            return "0";
-        }
+        return player;
     }
 
     public void onUnregister() {
