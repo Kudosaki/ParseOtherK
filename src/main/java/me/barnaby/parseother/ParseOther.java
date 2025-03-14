@@ -14,14 +14,16 @@ public class ParseOther extends PlaceholderExpansion {
 
     private final Map<String, String> nameCache = new ConcurrentHashMap<>();
     private final Map<UUID, String> uuidCache = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService cacheCleaner = Executors.newScheduledThreadPool(1);
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
 
     public ParseOther() {
-        cacheCleaner.scheduleAtFixedRate(() -> {
-            nameCache.replaceAll((k, v) -> null);
-            uuidCache.replaceAll((k, v) -> null);
-        }, 1, 1, TimeUnit.HOURS);
+        if (!cacheCleaner.isShutdown() && !cacheCleaner.isTerminated()) {
+            cacheCleaner.scheduleAtFixedRate(() -> {
+                nameCache.clear();
+                uuidCache.clear();
+            }, 1, 1, TimeUnit.HOURS);
+        }
     }
 
     @Override
@@ -48,7 +50,7 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\\}_", 2);
         if (strings.length < 2) {
             return "0";
         }
@@ -70,16 +72,17 @@ public class ParseOther extends PlaceholderExpansion {
         if (nameCache.containsKey(user.toLowerCase())) {
             player = Bukkit.getOfflinePlayer(nameCache.get(user.toLowerCase()));
         } else {
-            try {
-                UUID id = UUID.fromString(user);
-                String cachedName = uuidCache.computeIfAbsent(id, key -> {
-                    OfflinePlayer resolved = Bukkit.getOfflinePlayer(key);
-                    return resolved.getName() != null ? resolved.getName() : "";
-                });
-                if (!cachedName.isEmpty()) {
-                    player = Bukkit.getOfflinePlayer(cachedName);
-                }
-            } catch (IllegalArgumentException ignored) {
+            if (user.length() == 36) {
+                try {
+                    UUID id = UUID.fromString(user);
+                    player = Bukkit.getOfflinePlayer(uuidCache.computeIfAbsent(id, key -> {
+                        OfflinePlayer resolved = Bukkit.getOfflinePlayer(key);
+                        return resolved.getName() != null ? resolved.getName() : null;
+                    }));
+                } catch (IllegalArgumentException ignored) {}
+            }
+            
+            if (player == null) {
                 player = Bukkit.getOfflinePlayer(user);
                 if (player.getName() != null) {
                     nameCache.put(user.toLowerCase(), player.getName());
@@ -91,20 +94,26 @@ public class ParseOther extends PlaceholderExpansion {
             return "0";
         }
 
-        String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
-        return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
+        try {
+            String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
+            return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
+        } catch (Exception e) {
+            Bukkit.getLogger().severe("[ParseOther] Error processing placeholder: " + e.getMessage());
+            return "0";
+        }
     }
 
+    @Override
     public void onUnregister() {
         cacheCleaner.shutdown();
         try {
             if (!cacheCleaner.awaitTermination(5, TimeUnit.SECONDS)) {
                 cacheCleaner.shutdownNow();
-                Thread.currentThread().interrupt(); // Preserve interrupt status
+                Bukkit.getLogger().warning("[ParseOther] Forced shutdown of cacheCleaner due to timeout.");
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ignored) {
             cacheCleaner.shutdownNow();
-            Thread.currentThread().interrupt(); // Restore interrupt status
+            Thread.currentThread().interrupt();
         }
     }
 }
