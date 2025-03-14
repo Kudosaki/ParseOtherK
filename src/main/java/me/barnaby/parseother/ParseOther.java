@@ -2,7 +2,7 @@ package me.barnaby.parseother;
 
 import java.util.UUID;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -10,88 +10,93 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import net.md_5.bungee.api.ChatColor;
 
 public class ParseOther extends PlaceholderExpansion {
+  
+    private final Map<String, String> nameCache = new ConcurrentHashMap<>();
+    private final Map<UUID, String> uuidCache = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService cacheCleaner = Executors.newScheduledThreadPool(1);
 
-  private final Map<String, String> nameCache = new ConcurrentHashMap<>();
-  private final Map<UUID, String> uuidCache = new ConcurrentHashMap<>();
-
-  @Override
-  public String getAuthor() {
-    return "cj89898";
-  }
-
-  @Override
-  public String getIdentifier() {
-    return "parseother";
-  }
-
-  @Override
-  public String getVersion() {
-    return "2.0.0";
-  }
-
-  @SuppressWarnings("deprecation")
-  @Override
-  public String onRequest(OfflinePlayer p, String s) {
-    boolean unsafe = s.startsWith("unsafe_");
-    if (unsafe) s = s.substring(7);
-
-    String[] parts = s.split("(?<!\\\\)\\}_", 2);
-    if (parts.length < 2) return "0";
-
-    String user = parts[0].substring(1).replace("\\}_", "}_");
-    String placeholder = parts[1].substring(1, parts[1].length() - 1);
-    if (placeholder.isBlank() || placeholder.contains("%")) return "0";
-
-    user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + user + "%") : user;
-    
-    // ✅ Remove color codes
-    user = ChatColor.stripColor(user);
-
-    // ✅ Remove all non-Minecraft username characters (optimized loop instead of regex)
-    StringBuilder cleanUser = new StringBuilder();
-    for (char c : user.toCharArray()) {
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-            cleanUser.append(c);
-        }
+    public ParseOther() {
+        // Clears the cache every 1 hour to prevent stale data
+        cacheCleaner.scheduleAtFixedRate(() -> {
+            nameCache.clear();
+            uuidCache.clear();
+        }, 1, 1, TimeUnit.HOURS);
     }
-    user = cleanUser.toString();
 
-    // Reject empty names after sanitization
-    if (user.isBlank()) return "0";
+    @Override
+    public String getAuthor() {
+        return "cj89898";
+    }
 
-    String lowerUser = user.toLowerCase(); // ✅ Store lowercase username for efficiency
-    OfflinePlayer player = null;
+    @Override
+    public String getIdentifier() {
+        return "parseother";
+    }
 
-    // Check if user is in nameCache
-    String cachedName = nameCache.get(lowerUser);
-    if (cachedName != null) {
-      player = Bukkit.getOfflinePlayer(cachedName);
-    } else {
-      try {
-        UUID id = UUID.fromString(user);
-        String cachedUUIDName = uuidCache.get(id);
-        if (cachedUUIDName != null) {
-          player = Bukkit.getOfflinePlayer(cachedUUIDName);
+    @Override
+    public String getVersion() {
+        return "2.0.0";
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public String onRequest(OfflinePlayer p, String s) {
+        boolean unsafe = false;
+        if (s.startsWith("unsafe_")) {
+            s = s.substring(7);
+            unsafe = true;
+        }
+
+        String[] strings = s.split("(?<!\\\\)\\}_", 2);
+        if (strings.length < 2) {
+            return "0";
+        }
+
+        strings[0] = strings[0].substring(1).replaceAll("\\\\}_", "}_");
+        strings[1] = strings[1].substring(1, strings[1].length() - 1);
+
+        OfflinePlayer player = null;
+        String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
+
+        // Validate input username (no color codes, only alphanumeric and underscores)
+        if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !user.matches("^[a-zA-Z0-9_]{3,16}$")) {
+            return "0";
+        }
+
+        // Check if user is already cached
+        if (nameCache.containsKey(user.toLowerCase())) {
+            player = Bukkit.getOfflinePlayer(nameCache.get(user.toLowerCase()));
         } else {
-          player = Bukkit.getOfflinePlayer(id);
-          if (player.getName() != null) {
-            uuidCache.put(id, player.getName());
-          }
+            // Try resolving UUID first
+            try {
+                UUID id = UUID.fromString(user);
+                if (uuidCache.containsKey(id)) {
+                    player = Bukkit.getOfflinePlayer(uuidCache.get(id));
+                } else {
+                    player = Bukkit.getOfflinePlayer(id);
+                    if (player.getName() != null) {
+                        uuidCache.put(id, player.getName());
+                    }
+                }
+            } catch (IllegalArgumentException uuidException) { // Now only catches invalid UUIDs
+                player = Bukkit.getOfflinePlayer(user);
+                if (player.getName() != null) {
+                    nameCache.put(user.toLowerCase(), player.getName()); // Cache real username
+                }
+            }
         }
-      } catch (IllegalArgumentException e) {
-        player = Bukkit.getOfflinePlayer(user);
-        if (player.getName() != null) {
-          nameCache.put(lowerUser, player.getName());
+
+        if (player == null || player.getName() == null || strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
+            return "0";
         }
-      }
+
+        // Optimized: Only call PlaceholderAPI once
+        String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
+        return ChatColor.translateAlternateColorCodes('&', placeholder.startsWith("%") && placeholder.endsWith("%") ? strings[1] : placeholder);
     }
 
-    if (player == null || player.getName() == null) return "0";
-
-    // Process placeholder
-    String result = PlaceholderAPI.setPlaceholders(player, "%" + placeholder + "%");
-    if (result.startsWith("%") && result.endsWith("%")) result = placeholder;
-
-    return ChatColor.translateAlternateColorCodes('&', result);
-  }
+    // Properly shuts down the cache cleaner when the plugin is disabled
+    public void onDisable() {
+        cacheCleaner.shutdownNow(); // Immediately stops cache cleaner tasks
+    }
 }
