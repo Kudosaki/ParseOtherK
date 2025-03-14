@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import net.md_5.bungee.api.ChatColor; // Required for color support
 
 public class ParseOther extends PlaceholderExpansion {
   
@@ -41,28 +42,16 @@ public class ParseOther extends PlaceholderExpansion {
     strings[0] = strings[0].replaceAll("\\\\}_", "}_");
     strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
-    OfflinePlayer player;
-    String user;
-
-    if (unsafe) {
-      user = PlaceholderAPI.setPlaceholders(p, ("%" + strings[0] + "%"));
-    } else {
-      user = strings[0];
-    }
+    OfflinePlayer player = null;
+    String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
 
     if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%")) {
       return "0";
     }
 
-    // Strip formatting codes
-    user = user.replaceAll("(?i)[&§][0-9A-FK-OR]", "");
-
     try {
       UUID id = UUID.fromString(user);
       player = Bukkit.getOfflinePlayer(id);
-      if (player.getName() == null) {
-        player = Bukkit.getOfflinePlayer(user);
-      }
     } catch (IllegalArgumentException e) {
       player = Bukkit.getOfflinePlayer(user);
     }
@@ -75,11 +64,12 @@ public class ParseOther extends PlaceholderExpansion {
       return "0";
     }
 
-    String placeholder = PlaceholderAPI.setPlaceholders(player, ("%" + strings[1] + "%"));
+    String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
     if (placeholder.startsWith("%") && placeholder.endsWith("%")) {
         placeholder = strings[1];
     }
 
-    return PlaceholderAPI.setPlaceholders(player, placeholder);
+    // Allow color codes in the output
+    return ChatColor.translateAlternateColorCodes('&', PlaceholderAPI.setPlaceholders(player, placeholder));
   }
 }
