@@ -6,7 +6,7 @@ import org.bukkit.OfflinePlayer;
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 
-public class ParseOtherExpansion extends PlaceholderExpansion {
+public class ParseOther extends PlaceholderExpansion {
   
   @Override
   public String getAuthor() {
