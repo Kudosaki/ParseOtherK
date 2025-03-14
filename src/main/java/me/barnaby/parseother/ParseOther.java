@@ -69,9 +69,12 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         // Check cache first
-        if (nameCache.containsKey(user.toLowerCase())) {
-            player = Bukkit.getOfflinePlayer(nameCache.get(user.toLowerCase()));
-        } else {
+        player = nameCache.computeIfAbsent(user.toLowerCase(), key -> {
+            OfflinePlayer cachedPlayer = Bukkit.getOfflinePlayer(key);
+            return cachedPlayer.getName() != null ? cachedPlayer.getName() : null;
+        });
+
+        if (player == null) {
             if (user.length() == 36) {
                 try {
                     UUID id = UUID.fromString(user);
@@ -81,7 +84,7 @@ public class ParseOther extends PlaceholderExpansion {
                     }));
                 } catch (IllegalArgumentException ignored) {}
             }
-            
+
             if (player == null) {
                 player = Bukkit.getOfflinePlayer(user);
                 if (player.getName() != null) {
