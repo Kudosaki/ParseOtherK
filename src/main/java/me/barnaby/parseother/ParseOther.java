@@ -18,7 +18,7 @@ public class ParseOther extends PlaceholderExpansion {
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
 
     public ParseOther() {
-        if (!cacheCleaner.isShutdown() && !cacheCleaner isTerminated()) {
+        if (!cacheCleaner.isShutdown() && !cacheCleaner.isTerminated()) {
             cacheCleaner.scheduleAtFixedRate(() -> {
                 nameCache.clear();
                 uuidCache.clear();
@@ -63,13 +63,13 @@ public class ParseOther extends PlaceholderExpansion {
 
         String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
 
-        if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !USERNAME_PATTERN.matcher(user).matches()) {
+        if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user contains("%") || !USERNAME_PATTERN.matcher(user).matches()) {
             return "0";
         }
 
         OfflinePlayer player = resolvePlayer(user);
 
-        if (player == null || player.getName() == null || strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
+        if (player == null || player.getName() == null || strings[1] == null || strings[1].isBlank() || strings[1] contains("%")) {
             return "0";
         }
 
