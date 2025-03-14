@@ -14,13 +14,13 @@ public class ParseOther extends PlaceholderExpansion {
 
     private final Map<String, String> nameCache = new ConcurrentHashMap<>();
     private final Map<UUID, String> uuidCache = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService cacheCleaner = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService cacheCleaner = Executors.newSingleThreadScheduledExecutor();
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
 
     public ParseOther() {
         cacheCleaner.scheduleAtFixedRate(() -> {
-            nameCache.clear();
-            uuidCache.clear();
+            nameCache.replaceAll((k, v) -> null);
+            uuidCache.replaceAll((k, v) -> null);
         }, 1, 1, TimeUnit.HOURS);
     }
 
@@ -48,7 +48,7 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\}_", 2);
         if (strings.length < 2) {
             return "0";
         }
@@ -72,11 +72,14 @@ public class ParseOther extends PlaceholderExpansion {
         } else {
             try {
                 UUID id = UUID.fromString(user);
-                player = Bukkit.getOfflinePlayer(uuidCache.computeIfAbsent(id, key -> {
+                String cachedName = uuidCache.computeIfAbsent(id, key -> {
                     OfflinePlayer resolved = Bukkit.getOfflinePlayer(key);
-                    return resolved.getName() != null ? resolved.getName() : null;
-                }));
-            } catch (IllegalArgumentException uuidException) { 
+                    return resolved.getName() != null ? resolved.getName() : "";
+                });
+                if (!cachedName.isEmpty()) {
+                    player = Bukkit.getOfflinePlayer(cachedName);
+                }
+            } catch (IllegalArgumentException ignored) {
                 player = Bukkit.getOfflinePlayer(user);
                 if (player.getName() != null) {
                     nameCache.put(user.toLowerCase(), player.getName());
@@ -97,9 +100,11 @@ public class ParseOther extends PlaceholderExpansion {
         try {
             if (!cacheCleaner.awaitTermination(5, TimeUnit.SECONDS)) {
                 cacheCleaner.shutdownNow();
+                Thread.currentThread().interrupt(); // Preserve interrupt status
             }
-        } catch (InterruptedException ignored) {
+        } catch (InterruptedException e) {
             cacheCleaner.shutdownNow();
+            Thread.currentThread().interrupt(); // Restore interrupt status
         }
     }
 }
