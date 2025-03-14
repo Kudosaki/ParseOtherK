@@ -1,7 +1,6 @@
 package me.barnaby.parseother;
 
 import java.util.UUID;
-import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -27,8 +26,6 @@ public class ParseOther extends PlaceholderExpansion {
   @SuppressWarnings("deprecation")
   @Override
   public String onRequest(OfflinePlayer p, String s) {
-    Bukkit.getLogger().log(Level.INFO, "[ParseOther] Received placeholder request: " + s);
-
     boolean unsafe = false;
     if (s.startsWith("unsafe_")) {
       s = s.substring(7);
@@ -37,7 +34,6 @@ public class ParseOther extends PlaceholderExpansion {
 
     String[] strings = s.split("(?<!\\\\)\\}_", 2);
     if (strings.length < 2) {
-      Bukkit.getLogger().log(Level.WARNING, "[ParseOther] Invalid placeholder format: " + s);
       return "0";
     }
 
@@ -55,12 +51,11 @@ public class ParseOther extends PlaceholderExpansion {
     }
 
     if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%")) {
-      Bukkit.getLogger().log(Level.WARNING, "[ParseOther] Invalid user placeholder: " + strings[0]);
       return "0";
     }
 
-    // **New: Strip formatting codes from the detected name**
-    user = user.replaceAll("(?i)[&§][0-9A-FK-OR]", ""); // Removes Minecraft color/format codes
+    // Strip formatting codes
+    user = user.replaceAll("(?i)[&§][0-9A-FK-OR]", "");
 
     try {
       UUID id = UUID.fromString(user);
@@ -72,11 +67,11 @@ public class ParseOther extends PlaceholderExpansion {
       player = Bukkit.getOfflinePlayer(user);
     }
 
-    // **Debug log for detected first placeholder (Player Name/UUID)**
-    Bukkit.getLogger().log(Level.INFO, "[ParseOther] Detected player for parsing: " + player.getName() + " (UUID: " + player.getUniqueId() + ")");
+    if (player == null || player.getName() == null) {
+      return "0";
+    }
 
     if (strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
-      Bukkit.getLogger().log(Level.WARNING, "[ParseOther] Invalid placeholder target: " + strings[1]);
       return "0";
     }
 
@@ -85,7 +80,6 @@ public class ParseOther extends PlaceholderExpansion {
         placeholder = strings[1];
     }
 
-    Bukkit.getLogger().log(Level.INFO, "[ParseOther] Resolved placeholder: " + strings[1] + " -> " + placeholder);
     return PlaceholderAPI.setPlaceholders(player, placeholder);
   }
 }
