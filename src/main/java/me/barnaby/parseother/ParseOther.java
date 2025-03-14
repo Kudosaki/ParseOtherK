@@ -1,14 +1,18 @@
 package me.barnaby.parseother;
 
 import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import net.md_5.bungee.api.ChatColor; // Required for color support
+import net.md_5.bungee.api.ChatColor;
 
 public class ParseOther extends PlaceholderExpansion {
   
+  private final Map<String, String> nameCache = new ConcurrentHashMap<>();
+
   @Override
   public String getAuthor() {
     return "cj89898";
@@ -49,11 +53,20 @@ public class ParseOther extends PlaceholderExpansion {
       return "0";
     }
 
-    try {
-      UUID id = UUID.fromString(user);
-      player = Bukkit.getOfflinePlayer(id);
-    } catch (IllegalArgumentException e) {
-      player = Bukkit.getOfflinePlayer(user);
+    // Check cache first
+    if (nameCache.containsKey(user.toLowerCase())) {
+      player = Bukkit.getOfflinePlayer(nameCache.get(user.toLowerCase()));
+    } else {
+      // Try resolving UUID first
+      try {
+        UUID id = UUID.fromString(user);
+        player = Bukkit.getOfflinePlayer(id);
+      } catch (IllegalArgumentException e) {
+        player = Bukkit.getOfflinePlayer(user);
+        if (player.getName() != null) {
+          nameCache.put(user.toLowerCase(), player.getName()); // Cache real username
+        }
+      }
     }
 
     if (player == null || player.getName() == null) {
@@ -69,7 +82,6 @@ public class ParseOther extends PlaceholderExpansion {
         placeholder = strings[1];
     }
 
-    // Allow color codes in the output
     return ChatColor.translateAlternateColorCodes('&', PlaceholderAPI.setPlaceholders(player, placeholder));
   }
 }
