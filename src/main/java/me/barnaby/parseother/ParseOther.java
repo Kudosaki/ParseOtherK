@@ -43,23 +43,20 @@ public class ParseOther extends PlaceholderExpansion {
       return "0";
     }
 
-    strings[0] = strings[0].substring(1);
-    strings[0] = strings[0].replaceAll("\\\\}_", "}_");
+    strings[0] = strings[0].substring(1).replaceAll("\\\\}_", "}_");
     strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
     OfflinePlayer player = null;
     String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
+    user = ChatColor.stripColor(user); // Strip color codes from username
 
-    // Validate input username
     if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !user.matches("^[a-zA-Z0-9_]{3,16}$")) {
       return "0";
     }
 
-    // Check if user is already cached
     if (nameCache.containsKey(user.toLowerCase())) {
       player = Bukkit.getOfflinePlayer(nameCache.get(user.toLowerCase()));
     } else {
-      // Try resolving UUID first
       try {
         UUID id = UUID.fromString(user);
         if (uuidCache.containsKey(id)) {
@@ -67,13 +64,13 @@ public class ParseOther extends PlaceholderExpansion {
         } else {
           player = Bukkit.getOfflinePlayer(id);
           if (player.getName() != null) {
-            uuidCache.put(id, player.getName());
+            uuidCache.put(id, ChatColor.stripColor(player.getName()));
           }
         }
       } catch (IllegalArgumentException e) {
         player = Bukkit.getOfflinePlayer(user);
         if (player.getName() != null) {
-          nameCache.put(user.toLowerCase(), player.getName()); // Cache real username
+          nameCache.put(user.toLowerCase(), ChatColor.stripColor(player.getName()));
         }
       }
     }
@@ -88,7 +85,7 @@ public class ParseOther extends PlaceholderExpansion {
 
     String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
     if (placeholder.startsWith("%") && placeholder.endsWith("%")) {
-        placeholder = strings[1];
+      placeholder = strings[1];
     }
 
     return ChatColor.translateAlternateColorCodes('&', PlaceholderAPI.setPlaceholders(player, placeholder));
