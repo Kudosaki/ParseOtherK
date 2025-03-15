@@ -48,7 +48,7 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\}_", 2);
         if (strings.length < 2 || strings[1].length() < 2) {
             return "0";
         }
@@ -65,25 +65,23 @@ public class ParseOther extends PlaceholderExpansion {
             return "0";
         }
 
-        OfflinePlayer targetPlayer = resolvePlayer(user);
-        if (targetPlayer == null || targetPlayer.getName() == null || strings[1].isBlank()) {
+        OfflinePlayer player = resolvePlayer(user);
+
+        if (player == null || player.getName() == null || strings[1].isBlank() || strings[1].contains("%")) {
             return "0";
         }
 
         try {
-            // **Fix: Resolve nested placeholders multiple times to ensure full expansion**
-            String resolvedPlaceholder = resolvePlaceholders(targetPlayer, "%" + strings[1] + "%");
+            String placeholderResult = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
 
-            Bukkit.getLogger().info("[ParseOther] Resolved Placeholder: " + resolvedPlaceholder);
-
-            if (resolvedPlaceholder == null || resolvedPlaceholder.trim().isEmpty() || containsUnresolvedPlaceholders(resolvedPlaceholder)) {
+            // Ensure unresolved placeholders or empty results default to "0"
+            if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("{")) {
                 return "0";
             }
 
-            return ChatColor.translateAlternateColorCodes('&', resolvedPlaceholder);
+            return ChatColor.translateAlternateColorCodes('&', placeholderResult);
         } catch (Exception e) {
-            Bukkit.getLogger().warning("[ParseOther] Error parsing placeholder: " + e.getMessage());
-            return "0";
+            return "0"; // If any error occurs, return "0"
         }
     }
 
@@ -92,42 +90,22 @@ public class ParseOther extends PlaceholderExpansion {
 
         if (USERNAME_PATTERN.matcher(user).matches()) {
             player = Bukkit.getOfflinePlayer(user);
-            if (player.hasPlayedBefore() || player.isOnline()) {
-                nameCache.put(user.toLowerCase(), player.getName());
+            if (!player.hasPlayedBefore() && !player.isOnline()) {
+                return null; // Ensure only known players are returned
             }
+            nameCache.put(user.toLowerCase(), player.getName());
         } else if (user.length() == 36) {
             try {
                 UUID uuid = UUID.fromString(user);
                 player = Bukkit.getOfflinePlayer(uuid);
-                if (player.hasPlayedBefore() || player.isOnline()) {
-                    uuidCache.put(uuid, player.getName());
+                if (!player.hasPlayedBefore() && !player.isOnline()) {
+                    return null;
                 }
+                uuidCache.put(uuid, player.getName());
             } catch (IllegalArgumentException ignored) {}
         }
 
         return (player != null && player.getName() != null) ? player : null;
-    }
-
-    /**
-     * Resolves placeholders recursively to ensure full expansion.
-     */
-    private String resolvePlaceholders(OfflinePlayer player, String placeholder) {
-        String resolved = PlaceholderAPI.setPlaceholders(player, placeholder);
-
-        // Recursively resolve placeholders if still unresolved
-        int attempts = 3;
-        while (containsUnresolvedPlaceholders(resolved) && attempts-- > 0) {
-            resolved = PlaceholderAPI.setPlaceholders(player, resolved);
-        }
-
-        return resolved;
-    }
-
-    /**
-     * Checks if the string contains unresolved PlaceholderAPI placeholders.
-     */
-    private boolean containsUnresolvedPlaceholders(String input) {
-        return input.contains("%") || input.contains("{") || input.contains("}");
     }
 
     public void onUnregister() {
