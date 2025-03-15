@@ -50,7 +50,7 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\}_", 2);
         if (strings.length < 2) {
             return "0";
         }
@@ -86,31 +86,27 @@ public class ParseOther extends PlaceholderExpansion {
         OfflinePlayer player = null;
 
         // Check name cache
-        String playerName = nameCache.computeIfAbsent(user.toLowerCase(), key -> {
-            OfflinePlayer cachedPlayer = Bukkit.getOfflinePlayer(key);
-            return cachedPlayer.getName() != null ? cachedPlayer.getName() : null;
-        });
-
+        String playerName = nameCache.get(user.toLowerCase());
         if (playerName != null) {
             player = Bukkit.getOfflinePlayer(playerName);
         } else if (user.length() == 36) {
             try {
                 UUID id = UUID.fromString(user);
-                playerName = uuidCache.computeIfAbsent(id, key -> {
-                    OfflinePlayer resolved = Bukkit.getOfflinePlayer(key);
-                    return resolved.getName() != null ? resolved.getName() : null;
-                });
+                playerName = uuidCache.get(id);
                 if (playerName != null) {
                     player = Bukkit.getOfflinePlayer(playerName);
                 }
             } catch (IllegalArgumentException ignored) {}
         }
 
+        // Final fallback
         if (player == null) {
             player = Bukkit.getOfflinePlayer(user);
-            if (player.getName() != null) {
-                nameCache.put(user.toLowerCase(), player.getName());
-            }
+        }
+
+        // Ignore cached players if they are offline
+        if (!player.isOnline()) {
+            return null;
         }
 
         return player;
