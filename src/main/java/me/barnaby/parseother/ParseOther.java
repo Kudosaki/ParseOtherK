@@ -48,12 +48,12 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\)\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\\}_", 2);
         if (strings.length < 2 || strings[1].length() < 2) {
             return "0";
         }
 
-        strings[0] = strings[0].substring(1).replaceAll("\\}_", "}_");
+        strings[0] = strings[0].substring(1).replaceAll("\\\\}_", "}_");
         strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
         String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
