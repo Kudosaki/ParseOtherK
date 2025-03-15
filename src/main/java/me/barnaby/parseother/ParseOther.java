@@ -44,37 +44,45 @@ public class ParseOther extends PlaceholderExpansion {
     @SuppressWarnings("deprecation")
     @Override
     public String onRequest(OfflinePlayer p, String s) {
+        Bukkit.getLogger().info("[ParseOther] Received request: Player=" + (p != null ? p.getName() : "null") + ", Placeholder=" + s);
+
         boolean unsafe = false;
         if (s.startsWith("unsafe_")) {
             s = s.substring(7);
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\}_", 2);
         if (strings.length < 2) {
+            Bukkit.getLogger().info("[ParseOther] Invalid format, returning 0.");
             return "0";
         }
 
         strings[0] = strings[0].substring(1).replaceAll("\\\\}_", "}_");
         if (strings[1].isEmpty() || strings[1].length() < 2) {
+            Bukkit.getLogger().info("[ParseOther] Invalid placeholder content, returning 0.");
             return "0";
         }
         strings[1] = strings[1].substring(1, strings[1].length() - 1);
 
         String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
+        Bukkit.getLogger().info("[ParseOther] Parsed user: " + user);
 
         if (user == null || user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !USERNAME_PATTERN.matcher(user).matches()) {
+            Bukkit.getLogger().info("[ParseOther] Invalid username, returning 0.");
             return "0";
         }
 
         OfflinePlayer player = resolvePlayer(user);
 
         if (player == null || player.getName() == null || strings[1] == null || strings[1].isBlank() || strings[1].contains("%")) {
+            Bukkit.getLogger().info("[ParseOther] Could not resolve player or invalid placeholder, returning 0.");
             return "0";
         }
 
         try {
             String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
+            Bukkit.getLogger().info("[ParseOther] Fetched placeholder result: " + placeholder);
             return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
         } catch (Exception e) {
             Bukkit.getLogger().severe("[ParseOther] Error processing placeholder: " + e.getMessage());
@@ -83,6 +91,7 @@ public class ParseOther extends PlaceholderExpansion {
     }
 
     private OfflinePlayer resolvePlayer(String user) {
+        Bukkit.getLogger().info("[ParseOther] Resolving player: " + user);
         OfflinePlayer player = null;
 
         if (USERNAME_PATTERN.matcher(user).matches()) {
@@ -100,9 +109,11 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         if (player == null || !player.isOnline() || player.getName() == null) {
+            Bukkit.getLogger().info("[ParseOther] Player not found or offline, returning null.");
             return null;
         }
 
+        Bukkit.getLogger().info("[ParseOther] Successfully resolved player: " + player.getName());
         return player;
     }
 
