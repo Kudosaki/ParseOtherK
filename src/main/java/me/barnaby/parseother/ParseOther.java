@@ -18,10 +18,11 @@ public class ParseOther extends PlaceholderExpansion {
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,16}$");
 
     public ParseOther() {
+        // Reduce cache lifetime to prevent outdated player data issues
         cacheCleaner.scheduleAtFixedRate(() -> {
             nameCache.clear();
             uuidCache.clear();
-        }, 30, 30, TimeUnit.MINUTES);
+        }, 5, 5, TimeUnit.MINUTES); // Cleared every 5 minutes
     }
 
     @Override
@@ -48,8 +49,7 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        // Fix illegal escape character issue in regex
-        String[] strings = s.split("(?<!\\\\)}_", 2);
+        String[] strings = s.split("(?<!\\\\)\\}_", 2);
         if (strings.length < 2 || strings[1].length() < 2) {
             return "0";
         }
@@ -67,16 +67,18 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         OfflinePlayer player = resolvePlayer(user);
+
         if (player == null || player.getName() == null || strings[1].isBlank() || strings[1].contains("%")) {
             return "0";
         }
 
         try {
-            // Use the new recursive resolver
-            String placeholderResult = resolvePlaceholders(player, "%" + strings[1] + "%");
+            // Ensure we always get the latest PlaceholderAPI data, even if offline
+            OfflinePlayer freshPlayer = Bukkit.getOfflinePlayer(player.getUniqueId());
+            String placeholderResult = PlaceholderAPI.setPlaceholders(freshPlayer, "%" + strings[1] + "%");
 
-            // Ensure unresolved placeholders or empty results default to "0"
-            if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("{")) {
+            // If unresolved placeholders or empty results, return "0"
+            if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("{") || placeholderResult.contains("}")) {
                 return "0";
             }
 
@@ -105,27 +107,6 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         return (player != null && player.getName() != null) ? player : null;
-    }
-
-    /**
-     * Recursively resolves placeholders to ensure full evaluation before being used in another placeholder
-     */
-    private String resolvePlaceholders(OfflinePlayer player, String placeholder) {
-        String lastResult;
-        String resolved = placeholder;
-
-        do {
-            lastResult = resolved;
-            resolved = PlaceholderAPI.setPlaceholders(player, lastResult);
-
-            // Ensure placeholders that remain unresolved or empty default to "0"
-            if (resolved == null || resolved.trim().isEmpty() || resolved.contains("{")) {
-                return "0";
-            }
-
-        } while (!resolved.equals(lastResult) && resolved.contains("%"));
-
-        return resolved;
     }
 
     public void onUnregister() {
