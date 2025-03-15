@@ -65,23 +65,25 @@ public class ParseOther extends PlaceholderExpansion {
             return "0";
         }
 
-        OfflinePlayer player = resolvePlayer(user);
-
-        if (player == null || player.getName() == null || strings[1].isBlank() || strings[1].contains("%")) {
+        OfflinePlayer targetPlayer = resolvePlayer(user);
+        if (targetPlayer == null || targetPlayer.getName() == null || strings[1].isBlank()) {
             return "0";
         }
 
         try {
-            String placeholderResult = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
+            // **Fix: Resolve nested placeholders multiple times to ensure full expansion**
+            String resolvedPlaceholder = resolvePlaceholders(targetPlayer, "%" + strings[1] + "%");
 
-            // Ensure unresolved placeholders or empty results default to "0"
-            if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("{")) {
+            Bukkit.getLogger().info("[ParseOther] Resolved Placeholder: " + resolvedPlaceholder);
+
+            if (resolvedPlaceholder == null || resolvedPlaceholder.trim().isEmpty() || containsUnresolvedPlaceholders(resolvedPlaceholder)) {
                 return "0";
             }
 
-            return ChatColor.translateAlternateColorCodes('&', placeholderResult);
+            return ChatColor.translateAlternateColorCodes('&', resolvedPlaceholder);
         } catch (Exception e) {
-            return "0"; // If any error occurs, return "0"
+            Bukkit.getLogger().warning("[ParseOther] Error parsing placeholder: " + e.getMessage());
+            return "0";
         }
     }
 
@@ -104,6 +106,28 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         return (player != null && player.getName() != null) ? player : null;
+    }
+
+    /**
+     * Resolves placeholders recursively to ensure full expansion.
+     */
+    private String resolvePlaceholders(OfflinePlayer player, String placeholder) {
+        String resolved = PlaceholderAPI.setPlaceholders(player, placeholder);
+
+        // Recursively resolve placeholders if still unresolved
+        int attempts = 3;
+        while (containsUnresolvedPlaceholders(resolved) && attempts-- > 0) {
+            resolved = PlaceholderAPI.setPlaceholders(player, resolved);
+        }
+
+        return resolved;
+    }
+
+    /**
+     * Checks if the string contains unresolved PlaceholderAPI placeholders.
+     */
+    private boolean containsUnresolvedPlaceholders(String input) {
+        return input.contains("%") || input.contains("{") || input.contains("}");
     }
 
     public void onUnregister() {
