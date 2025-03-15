@@ -35,7 +35,7 @@ public class ParseOther extends PlaceholderExpansion {
             s = s.substring(7);
         }
 
-        String[] strings = s.split("(?<!\\\\)\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\\}_", 2);
         if (strings.length < 2 || strings[1].length() < 2) {
             return "0";
         }
