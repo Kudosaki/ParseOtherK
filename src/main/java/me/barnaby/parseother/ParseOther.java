@@ -85,27 +85,21 @@ public class ParseOther extends PlaceholderExpansion {
     private OfflinePlayer resolvePlayer(String user) {
         OfflinePlayer player = null;
 
-        // Check name cache
-        String playerName = nameCache.get(user.toLowerCase());
-        if (playerName != null) {
-            player = Bukkit.getOfflinePlayer(playerName);
+        if (USERNAME_PATTERN.matcher(user).matches()) {
+            String playerName = nameCache.get(user.toLowerCase());
+            if (playerName != null) {
+                player = Bukkit.getOfflinePlayer(playerName);
+            } else {
+                player = Bukkit.getOfflinePlayer(user);
+            }
         } else if (user.length() == 36) {
             try {
-                UUID id = UUID.fromString(user);
-                playerName = uuidCache.get(id);
-                if (playerName != null) {
-                    player = Bukkit.getOfflinePlayer(playerName);
-                }
+                UUID uuid = UUID.fromString(user);
+                player = Bukkit.getOfflinePlayer(uuid);
             } catch (IllegalArgumentException ignored) {}
         }
 
-        // Final fallback
-        if (player == null) {
-            player = Bukkit.getOfflinePlayer(user);
-        }
-
-        // Ignore cached players if they are offline
-        if (!player.isOnline()) {
+        if (player == null || !player.isOnline() || player.getName() == null) {
             return null;
         }
 
