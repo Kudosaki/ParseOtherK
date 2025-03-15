@@ -58,46 +58,53 @@ public class ParseOther extends PlaceholderExpansion {
 
         String user = unsafe ? PlaceholderAPI.setPlaceholders(p, "%" + strings[0] + "%") : strings[0];
 
-        // Strip colors and invalid characters
+        // Strip colors and sanitize input
         user = ChatColor.stripColor(user).replaceAll("[^a-zA-Z0-9_]", "");
 
+        // Ensure username is valid
         if (user.isBlank() || user.equalsIgnoreCase("none") || user.contains("%") || !USERNAME_PATTERN.matcher(user).matches()) {
             return "0";
         }
 
         OfflinePlayer player = resolvePlayer(user);
 
-        if (player == null || player.getName() == null || strings[1].isBlank() || strings[1].contains("%")) {
+        // Ensure valid player resolution
+        if (player == null || player.getName() == null) {
             return "0";
         }
 
         try {
-            String placeholder = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
-            return ChatColor.translateAlternateColorCodes('&', (placeholder == null || placeholder.trim().isEmpty() || placeholder.contains("%")) ? "0" : placeholder);
+            String placeholderResult = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
+
+            // Return "0" if result is null, empty, or contains unresolved placeholders
+            if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("%")) {
+                return "0";
+            }
+
+            return ChatColor.translateAlternateColorCodes('&', placeholderResult);
         } catch (Exception e) {
             return "0";
         }
     }
 
     private OfflinePlayer resolvePlayer(String user) {
-        OfflinePlayer player = null;
-
         if (USERNAME_PATTERN.matcher(user).matches()) {
-            player = Bukkit.getOfflinePlayer(user);
+            OfflinePlayer player = Bukkit.getOfflinePlayer(user);
             if (player.hasPlayedBefore() || player.isOnline()) {
                 nameCache.put(user.toLowerCase(), player.getName());
+                return player;
             }
         } else if (user.length() == 36) {
             try {
                 UUID uuid = UUID.fromString(user);
-                player = Bukkit.getOfflinePlayer(uuid);
+                OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
                 if (player.hasPlayedBefore() || player.isOnline()) {
                     uuidCache.put(uuid, player.getName());
+                    return player;
                 }
             } catch (IllegalArgumentException ignored) {}
         }
-
-        return (player != null && player.getName() != null) ? player : null;
+        return null; // Ensures "0" is returned if the player does not exist
     }
 
     public void onUnregister() {
