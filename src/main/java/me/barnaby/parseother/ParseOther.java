@@ -48,7 +48,7 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
+        String[] strings = s.split("(?<!\\\\)\}_", 2);
         if (strings.length < 2 || strings[1].length() < 2) {
             return "0";
         }
@@ -74,13 +74,10 @@ public class ParseOther extends PlaceholderExpansion {
         try {
             String placeholderResult = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
 
-            // Force empty placeholders to "0" to prevent invalid math expressions
-            if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("%")) {
+            // Ensure unresolved placeholders or empty results default to "0"
+            if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("{")) {
                 return "0";
             }
-
-            // Ensure empty placeholders within math expressions get replaced with "0"
-            placeholderResult = placeholderResult.replaceAll("\\{\\s*([a-zA-Z0-9_]+)\\s*\\}", "0");
 
             return ChatColor.translateAlternateColorCodes('&', placeholderResult);
         } catch (Exception e) {
