@@ -48,7 +48,8 @@ public class ParseOther extends PlaceholderExpansion {
             unsafe = true;
         }
 
-        String[] strings = s.split("(?<!\\\\)\\}_", 2);
+        // Fix illegal escape character issue in regex
+        String[] strings = s.split("(?<!\\\\)}_", 2);
         if (strings.length < 2 || strings[1].length() < 2) {
             return "0";
         }
@@ -66,13 +67,13 @@ public class ParseOther extends PlaceholderExpansion {
         }
 
         OfflinePlayer player = resolvePlayer(user);
-
         if (player == null || player.getName() == null || strings[1].isBlank() || strings[1].contains("%")) {
             return "0";
         }
 
         try {
-            String placeholderResult = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
+            // Use the new recursive resolver
+            String placeholderResult = resolvePlaceholders(player, "%" + strings[1] + "%");
 
             // Ensure unresolved placeholders or empty results default to "0"
             if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("{")) {
@@ -90,22 +91,41 @@ public class ParseOther extends PlaceholderExpansion {
 
         if (USERNAME_PATTERN.matcher(user).matches()) {
             player = Bukkit.getOfflinePlayer(user);
-            if (!player.hasPlayedBefore() && !player.isOnline()) {
-                return null; // Ensure only known players are returned
+            if (player.hasPlayedBefore() || player.isOnline()) {
+                nameCache.put(user.toLowerCase(), player.getName());
             }
-            nameCache.put(user.toLowerCase(), player.getName());
         } else if (user.length() == 36) {
             try {
                 UUID uuid = UUID.fromString(user);
                 player = Bukkit.getOfflinePlayer(uuid);
-                if (!player.hasPlayedBefore() && !player.isOnline()) {
-                    return null;
+                if (player.hasPlayedBefore() || player.isOnline()) {
+                    uuidCache.put(uuid, player.getName());
                 }
-                uuidCache.put(uuid, player.getName());
             } catch (IllegalArgumentException ignored) {}
         }
 
         return (player != null && player.getName() != null) ? player : null;
+    }
+
+    /**
+     * Recursively resolves placeholders to ensure full evaluation before being used in another placeholder
+     */
+    private String resolvePlaceholders(OfflinePlayer player, String placeholder) {
+        String lastResult;
+        String resolved = placeholder;
+
+        do {
+            lastResult = resolved;
+            resolved = PlaceholderAPI.setPlaceholders(player, lastResult);
+
+            // Ensure placeholders that remain unresolved or empty default to "0"
+            if (resolved == null || resolved.trim().isEmpty() || resolved.contains("{")) {
+                return "0";
+            }
+
+        } while (!resolved.equals(lastResult) && resolved.contains("%"));
+
+        return resolved;
     }
 
     public void onUnregister() {
