@@ -76,6 +76,8 @@ public class ParseOther extends PlaceholderExpansion {
         try {
             String placeholderResult = PlaceholderAPI.setPlaceholders(player, "%" + strings[1] + "%");
 
+            placeholderResult = ChatColor.stripColor(placeholderResult).replaceAll("[^a-zA-Z0-9 _.,:;!?()-]", "");
+
             // If unresolved placeholders or empty results, return "0"
             if (placeholderResult == null || placeholderResult.trim().isEmpty() || placeholderResult.contains("{") || placeholderResult.contains("}")) {
                 return "0";
